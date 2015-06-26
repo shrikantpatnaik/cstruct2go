@@ -56,6 +56,7 @@ func main() {
 	package_name := flag.String("p", "main", "Package name")
 	enable_format := flag.Bool("f", true, "Set to false if you do not want to format the file(or go is not installed on the system")
 	bool_type := flag.String("btype", "bool", "Translate bool to different type")
+	capitalize := flag.Bool("c", true, "Capitalizes names, Set to false if you do not want the structs and members accessible outside the package")
 
 	flag.Parse()
 	flags_string := fmt.Sprintf("Generated with flags: -p=%v -f=%v -btype=%v", *package_name, *enable_format, *bool_type)
@@ -71,7 +72,7 @@ func main() {
 	}
 	out_file = strings.TrimSuffix(out_file, filepath.Ext(out_file))
 	out_file = fmt.Sprintf("%s.go", out_file)
-	all_structs := createStructsFromFile(*input_file)
+	all_structs := createStructsFromFile(*input_file, *capitalize)
 	all_structs = fixPointersAndArrays(all_structs)
 	writeToFile(all_structs, out_file, *package_name, flags_string)
 	if *enable_format {
@@ -132,7 +133,7 @@ func writeToFile(defs []StructDef, filename string, packageName string, flag_str
 		io.WriteString(file, "}\n")
 	}
 }
-func createStructsFromFile(filename string) []StructDef {
+func createStructsFromFile(filename string, capitalize bool) []StructDef {
 
 	var struct_decl bool = false
 	var struct_begin bool = false
@@ -159,7 +160,11 @@ func createStructsFromFile(filename string) []StructDef {
 			} else if strings.Contains(line, "}") {
 				s := splitAndRemoveInitialSpaces(line)
 				newStructDef := current_struct
-				newStructDef.Name = strings.Title(trimSemiColons(s[1]))
+				struct_name := trimSemiColons(s[1])
+				if capitalize {
+					struct_name = strings.Title(struct_name)
+				}
+				newStructDef.Name = struct_name
 				length := len(all_structs)
 				all_structs = all_structs[0 : length+1]
 				all_structs[length] = *newStructDef
@@ -168,7 +173,11 @@ func createStructsFromFile(filename string) []StructDef {
 				s := splitAndRemoveInitialSpaces(line)
 				length := len(current_struct.Fields)
 				current_struct.Fields = current_struct.Fields[0 : length+1]
-				current_struct.Fields[length] = StructField{Name: strings.Title(trimSemiColons(s[1])), CType: s[0]}
+				field_name := trimSemiColons(s[1])
+				if capitalize {
+					field_name = strings.Title(field_name)
+				}
+				current_struct.Fields[length] = StructField{Name: field_name, CType: s[0]}
 			}
 		}
 	}
